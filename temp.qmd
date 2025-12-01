@@ -17,29 +17,37 @@ This is it! This is the culmination of all your work in both of the data science
 Here are the sections on how the project will be evaluated (A rubric will be released later with more specific parameters).
 
 * Questions and Goals: The questions you wish to answer and the goals of the project. You should have multiple questions that you answer in the project. Not all of them need to be questions that require modeling to answer, but some of them need to be.
-* Data Acquisition: The project describes how the data was obtained and gives substantial backround on the data. 
+* Data Acquisition: The project describes how the data was obtained and gives substantial background on the data. 
 * Data Preprocessing: Throughout the project, the proper preprocessing techniques (variable transformations, reshaping data, etc.) are utilized.
 * Exploratory Data Analysis: Proper exploratory plots and summarizes are utilized to describe the data and showcase certain interesting aspects of the data that you will explore later in the project.
 * Modeling and Analysis: This is a large portion of the project! You work toward answer the questions/goals you stated at the beginning. Your project needs to include at least 3 modeling techniques we discussed in class. You will fit, tune, and compare the methods. You will discuss the results and why they make sense in context. This section can include a wide range of modeling techniques. Your proposal should be focused on describing what you want to do in this section.
 * Data Product: You present your data, models, and conclusions in a professional manner. This could include an interactive data product.
 
 
-
+he said aloud in class groups of 2-3 are encouraged
+written part on markdown
+nov 17th til end of class is in class final worktime
 ## Place Work Below!!
 
 ```{r}
 # Library necessary packages
 library(dplyr)
+library(tidytext)
+library(ggplot2)
+library(textdata)
+library(vader)
 ```
+
 
 ```{r}
 df <- read.csv("DatingAppReviewsDataset.csv")
 
+
 df$X <- NULL
 
-df <- df %>%
-  rename("NumThumbsUp" = X.ThumbsUp)
 
+df <- df |>
+  rename("NumThumbsUp" = X.ThumbsUp)
 
 
 # example on using AFINN --> gotta tokenize the senetences into individual words
@@ -70,5 +78,12 @@ View(vader_example)
 
 vader_scores <- vader_df(df$Review[1:10])
 SentimentScore <- vader_scores$compound
-
 ```
+
+
+
+
+
+
+
+
