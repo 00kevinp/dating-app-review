@@ -30,29 +30,30 @@ Here are the sections on how the project will be evaluated (A rubric will be rel
 ```{r}
 # Library necessary packages
 library(dplyr)
+library(tidytext)
+library(ggplot2)
+library(textdata)
+library(vader)
+library(readr)
+library(cld3)
 ```
 
 ```{r}
-df <- read.csv("DatingAppReviewsDataset.csv")
+df <- read_csv("DatingAppReviewsDataset.csv", locale = locale(encoding = "UTF-8"))
 
-df$X <- NULL
+#df$Column1 <- NULL  # need this for joining the afinn_sent and df
 
-df <- df %>%
-  rename("NumThumbsUp" = X.ThumbsUp)
+#df <- df %>%
+ # rename("ThumbsUp" = X.ThumbsUp)
 
-
-
-# example on using AFINN --> gotta tokenize the senetences into individual words
-
+# example on using AFINN --> gotta tokenize the sentences into individual words
 
 afinn <- get_sentiments("afinn")
-
 
 AFINN_review_example <- tibble(text = df$Review[1])
 sentiment_example <- AFINN_review_example %>%
   unnest_tokens(word, text) %>%
   inner_join(afinn, by = "word")
-
 
 # apparently afinn cannot handle reviews very well because it only contains about 2,500 words in its lexicon
 #chatGPT says Vader is a better option and can handle emojis, slang, short sentences like "can't find"
@@ -70,5 +71,25 @@ View(vader_example)
 
 vader_scores <- vader_df(df$Review[1:10])
 SentimentScore <- vader_scores$compound
+
+#filtering out nonenglish reviews
+df$language <- cld3::detect_language(df$Review)
+df |> 
+  filter(language == "en")
+
+df |> 
+  mutate(language = detect_language(Review)) |>
+  filter(language %in% c("en", "fy", "uk"))
+
+afinn_sent <- df |>
+  unnest_tokens(word, Review) |>
+  inner_join(afinn, by = "word") |>
+  group_by(Column1) |>
+  summarize(AF_score = mean(value))
+
+df <- df %>%
+  left_join(afinn_sent, by = "Column1")
+
+
 
 ```
