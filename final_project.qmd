@@ -165,7 +165,7 @@ workflow <- workflow() %>%
 # attempted to fit
 fit <- workflow %>% fit(data = df_1000_rows)
 
-preds <- predict(fit, df_100_rows) |>
+preds <- predict(fit, df_1000_rows) |>
   bind_cols(df_1000_rows |> select(Rating))
 
 mertics <- metric_set(accuracy)
