@@ -1,5 +1,6 @@
 ---
 title: "Final Project: Data Science Culmination Project"
+author: "Carlie Cann, Nolan Dermigny, Kevin Pickelman"
 format: pdf
 ---
 
@@ -39,6 +40,9 @@ library(cld3)
 library(tidyr)
 # running into errors when installing/librarying tidymodels
 library(tidymodels)
+library(textrecipes)
+library(stopwords)
+library(kernlab)
 ```
 
 ```{r}
@@ -80,12 +84,11 @@ df |>
 afinn_sent <- df |>
   unnest_tokens(word, Review) |>
   inner_join(afinn, by = "word") |>
-  group_by(...1) |>
+  group_by(Column1) |>  #wasn't recognizing the ...1 so i changed it to Col1
   summarize(AF_score = mean(value))
 
 df <- df %>%
-  left_join(afinn_sent, by = "...1")
-
+  left_join(afinn_sent, by = "Column1") #wasn't recognizing the ...1 so i changed it to Col1
 highest_AF_scores <- df |>
   arrange(desc(AF_score)) |>
   slice(1:20) |>
@@ -93,6 +96,7 @@ highest_AF_scores <- df |>
 
 # feel free to add to this list if need be --> replaced the word with blanks ...
 # tried to replace the words with **** but for some reason not working
+df$Review <- iconv(df$Review, from = "UTF-8", to = "UTF-8", sub = "")
 words_to_remove <- c("Cock","Cocks","Bitch","Bitches", "Fuck","cock","cocks","bitch","bitches", "fuck")
 pattern <- paste0("\\b(", paste(words_to_remove, collapse = "|"), ")\\b")
 df$Review <- gsub(pattern, "", df$Review, ignore.case = TRUE)
@@ -125,8 +129,6 @@ number_of_reviews_by_app <- df |>
 
 # tinder dominates with the most reviews, then bumble, then hinge
 
-
-
 # lets see which app has the highest average sentiment analysis score
 # first, have to drop N/A AF_scores
 
@@ -137,25 +139,58 @@ num_of_reviews_by_app_and_average_AFscore <- df|>
   summarise(average_AFscore = mean(AF_score)) |>
   arrange(desc(average_AFscore))
 
-
-
 # sliced 100 rows of data so the model runs quicker
-df_100_rows <- df |>
-  slice(1:100)
+set.seed(96)
+# sliced 100 rows of data so the model runs quicker
+df_1000_rows <- df |>
+  slice(1:1000) |>  #increased the num of rows
+  mutate(Rating = as.factor(Rating))
 
 # built up the recipe
-recipe <- recipe(AF_score ~ Review, data = df_100_rows) %>%
+recipe <- recipe(Rating ~ Review, data = df_1000_rows) %>% #changed for predicting the rating 
   step_tokenize(Review) %>%
-  step_tf(Review)
+  step_stopwords(Review) |>
+  step_tfidf(Review) 
 
 # set the model to linear regression
-model <- linear_reg() %>% set_engine("lm")
+#model <- linear_reg() %>% set_engine("lm") this was the set up for the AFINN prediction
+svm_model <- svm_rbf(mode = "classification") |>
+  set_engine("kernlab")
 
 # workflow for the recipe + model
 workflow <- workflow() %>%
   add_recipe(recipe) %>%
-  add_model(model)
+  add_model(svm_model)
 
 # attempted to fit
-fit <- workflow %>% fit(data = df_100_rows)
+fit <- workflow %>% fit(data = df_1000_rows)
+
+preds <- predict(fit, df_100_rows) |>
+  bind_cols(df_1000_rows |> select(Rating))
+
+mertics <- metric_set(accuracy)
+metrics(preds, truth = Rating, estimate = .pred_class)
+
+head(preds, 10)
+
+cm <- conf_mat(preds, truth = Rating, estimate = .pred_class)
+cm
+
+#some lovely graphs for the results
+
+accuracy_rating <- preds |>
+  group_by(Rating) |>
+  summarize(accuracy = mean(.pred_class == Rating))
+
+ggplot(accuracy_rating, aes(x = Rating, y = accuracy, fill = Rating)) +
+  geom_col() +
+  ylim(0, 1) +
+  labs(title = "Model Accuracy by Rating", y = "Accuracy")+
+  theme_minimal()
+
+ggplot(preds, aes(x = .pred_class, fill = .pred_class)) +
+  geom_bar() +
+  labs(title = "Distribution of Predicted Ratings", x = "Predicted Rating", y = "Count") +
+  theme_minimal()
+
 ```
