@@ -37,6 +37,8 @@ library(vader)
 library(readr)
 library(cld3)
 library(tidyr)
+# running into errors when installing/librarying tidymodels
+library(tidymodels)
 ```
 
 ```{r}
@@ -136,4 +138,24 @@ num_of_reviews_by_app_and_average_AFscore <- df|>
   arrange(desc(average_AFscore))
 
 
+
+# sliced 100 rows of data so the model runs quicker
+df_100_rows <- df |>
+  slice(1:100)
+
+# built up the recipe
+recipe <- recipe(AF_score ~ Review, data = df_100_rows) %>%
+  step_tokenize(Review) %>%
+  step_tf(Review)
+
+# set the model to linear regression
+model <- linear_reg() %>% set_engine("lm")
+
+# workflow for the recipe + model
+workflow <- workflow() %>%
+  add_recipe(recipe) %>%
+  add_model(model)
+
+# attempted to fit
+fit <- workflow %>% fit(data = df_100_rows)
 ```
