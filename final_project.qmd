@@ -25,8 +25,30 @@ Here are the sections on how the project will be evaluated (A rubric will be rel
 * Data Product: You present your data, models, and conclusions in a professional manner. This could include an interactive data product.
 
 
+Dating App Sentiment Analysis and Rating Prediction
 
-## Place Work Below!!
+Data Set:
+
+This data set was aquired from Kaggle and contains various dating app ratings. Columns include:
+  
+  Name - the name of the person that left the review. (string)
+  Review - the actual review itself. (string)
+  Rating - the rating itself ranging. 1-5 (int)
+  ThumbsUp - the number of thumbs up/likes on the review (int)
+  Date&Time - the date and time the review was posted
+  App - the app the review was left for (string)
+  
+Questions & Goals:
+
+The goal of this project is to conduct sentiment analysis on the actual reviews themselves, and analyze the results. There are three main questions to ask about the finalized sentiment analysis:
+
+  1. How well do the sentiment analysis ratings correspond with the numerical app ratings, and can we fit a model(SVM) to predict the rating based on the sentiment scores?
+  
+  2. What is the overarching sentiment among the different apps, Tinder, Bumble, Hinge etc., and which app has the more postive/negative sentiments?
+  
+  3. How well does the sentiment rating correspond to thumbs up's, if at all? Do people tend to upvote more negative or postive reviews?
+
+## Code
 
 ```{r}
 # Library necessary packages
@@ -52,6 +74,9 @@ df <- read_csv("DatingAppReviewsDataset.csv", locale = locale(encoding = "UTF-8"
 
 df <- df %>%
  rename("ThumbsUp" = "#ThumbsUp")
+
+df <- df %>%
+ rename("Column1" = "...1") #consistent naming
 
 # example on using AFINN --> gotta tokenize the sentences into individual words
 
@@ -89,6 +114,7 @@ afinn_sent <- df |>
 
 df <- df %>%
   left_join(afinn_sent, by = "Column1") #wasn't recognizing the ...1 so i changed it to Col1
+
 highest_AF_scores <- df |>
   arrange(desc(AF_score)) |>
   slice(1:20) |>
@@ -193,4 +219,27 @@ ggplot(preds, aes(x = .pred_class, fill = .pred_class)) +
   labs(title = "Distribution of Predicted Ratings", x = "Predicted Rating", y = "Count") +
   theme_minimal()
 
+#avg sentiment score by app
+app_avgs <- df |> 
+  group_by(App) |>
+  summarize(
+    avg_sentiment = mean(AF_score, na.rm = TRUE),
+    standar_dev = sd(AF_score, na.rm = TRUE),
+    avg_rating = mean(Rating, na.rm = TRUE),
+    num_reviews = n()
+  )
+
+#bar chart of avg scores
+ggplot(data = app_avgs, aes(x = App, y = avg_sentiment)) + geom_bar(stat = "identity")
+
+#ratings bar chart for comparison
+ggplot(data = app_avgs, aes(x = App, y = avg_rating)) + geom_bar(stat = "identity")
+
+
 ```
+
+Analysis:
+
+Question 1:
+Question 2:
+Question 3:
