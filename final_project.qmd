@@ -250,7 +250,7 @@ app_avgs <- df |>
   )
 
 #bar chart of avg scores
-ggplot(data = app_avgs, aes(x = App, y = avg_sentiment)) + geom_bar(stat = "identity")
+ggplot(data = app_avgs, aes(x = App, y = avg_sentiment)) + geom_bar(stat = "identity") + labs(title = "Average Sentiment Score by App", x = "App", y = "Sentiment Score")
 
 #ratings bar chart for comparison
 ggplot(data = app_avgs, aes(x = App, y = avg_rating)) + geom_bar(stat = "identity")
