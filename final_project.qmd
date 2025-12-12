@@ -38,16 +38,14 @@ This data set was aquired from Kaggle and contains various dating app ratings. C
   Date&Time - the date and time the review was posted
   App - the app the review was left for (string)
   
+The data set consists of roughly 600,000 rows. With around 520,000 being from tinder, 100,000 from bumble, and 52,000 from hinge.
 Questions & Goals:
 
-The goal of this project is to conduct sentiment analysis on the actual reviews themselves, and analyze the results. There are three main questions to ask about the finalized sentiment analysis:
+The goal of this project is to conduct sentiment analysis on the actual reviews themselves, and analyze the results. There are two main questions to ask about the finalized sentiment analysis:
 
   1. How well do the sentiment analysis ratings correspond with the numerical app ratings, and can we fit a model(SVM) to predict the rating based on the sentiment scores?
   
   2. What is the overarching sentiment among the different apps, Tinder, Bumble, Hinge etc., and which app has the more postive/negative sentiments?
-  
-  3. How well does the sentiment rating correspond to thumbs up's, if at all? Do people tend to upvote more negative or postive reviews?
-
 ## Code
 
 ```{r}
@@ -111,11 +109,11 @@ df |>
 afinn_sent <- df |>
   unnest_tokens(word, Review) |>
   inner_join(afinn, by = "word") |>
-  group_by(...1) |>
+  group_by(Column1) |>
   summarize(AF_score = mean(value))
 
 df <- df %>%
-  left_join(afinn_sent, by = "...1")
+  left_join(afinn_sent, by = "Column1")
 
   group_by(Column1) |>  #wasn't recognizing the ...1 so i changed it to Col1
   summarize(AF_score = mean(value))
@@ -214,7 +212,7 @@ fit <- workflow %>% fit(data = df_1000_rows)
 preds <- predict(fit, df_1000_rows) |>
   bind_cols(df_1000_rows |> select(Rating))
 
-mertics <- metric_set(accuracy)
+metrics <- metric_set(accuracy)
 metrics(preds, truth = Rating, estimate = .pred_class)
 
 head(preds, 10)
@@ -227,6 +225,12 @@ cm
 accuracy_rating <- preds |>
   group_by(Rating) |>
   summarize(accuracy = mean(.pred_class == Rating))
+
+correct_predictions <- sum(preds$Rating == preds$.pred_class)
+total_predictions <- length(preds$Rating)
+accuracy <- correct_predictions / total_predictions
+
+print(accuracy)
 
 ggplot(accuracy_rating, aes(x = Rating, y = accuracy, fill = Rating)) +
   geom_col() +
@@ -243,8 +247,8 @@ ggplot(preds, aes(x = .pred_class, fill = .pred_class)) +
 app_avgs <- df |> 
   group_by(App) |>
   summarize(
-    avg_sentiment = mean(AF_score, na.rm = TRUE),
-    standar_dev = sd(AF_score, na.rm = TRUE),
+    avg_sentiment = mean(AF_score.x, na.rm = TRUE), #two seperate columns now with .x and .y at the end?
+    standar_dev = sd(AF_score.x, na.rm = TRUE),
     avg_rating = mean(Rating, na.rm = TRUE),
     num_reviews = n()
   )
@@ -254,4 +258,51 @@ ggplot(data = app_avgs, aes(x = App, y = avg_sentiment)) + geom_bar(stat = "iden
 
 #ratings bar chart for comparison
 ggplot(data = app_avgs, aes(x = App, y = avg_rating)) + geom_bar(stat = "identity")
+
+
+#upvote comparisons.
+
+#box plot
+ggplot(data = df, aes(x = factor(Rating), y = ThumbsUp)) +
+  geom_boxplot() +
+  geom_boxplot(width = 0.1) +
+  labs(title = "Upvotes Distribution by Rating") 
+
+#scatter plot for sentiment ratings since continuous
+ggplot(data = df, aes(x = AF_score.x, y = ThumbsUp)) +
+  geom_point() +
+  geom_smooth() +
+  labs(title = "Upvotes Distribution by Rating") 
+
+# avg and median upvotes by rating
+upvote_stats <- df |> 
+  group_by(Rating) |>
+  summarize(
+    num_reviews = n(),                          
+    avg_upvotes = mean(ThumbsUp, na.rm = TRUE),
+    median_upvotes = median(ThumbsUp, na.rm = TRUE),
+    sd_upvotes = sd(ThumbsUp, na.rm = TRUE),
+    total_upvotes = sum(ThumbsUp, na.rm = TRUE) 
+  ) |>
+  mutate(
+    percent_of_total = num_reviews / sum(num_reviews) * 100  # Percentage of all reviews
+  )
+
+print(upvote_stats)
+
+
 ```
+
+Analysis:
+
+As a whole the sentiment rating correspond fairly well with the actual numerical ratings. Despite the model having some trouble with the middle ratings, ie. 2,3,4, it was still very accurate with the 5 star and one star, showing accuracy levels above 90%. Additionally, the SVM having trouble with the middle ratings makes sense for this specific scenario, and likely reflects that that is where the actual AFINN ratings themselves struggled the most.
+
+As for overall sentiment by app, tinder takes the cake, with an average score north of .75, and the both bumble and hinge sit around .50. The actual app ratings paint a different story however, as hinge leads the way, then tinder, and then bumble. This discrepancy can be attributed to a multitude of different reasons, 1 being that the sentiment for tinder was on average higher ie. more positive words, and the ratings on average just did not reflect that. Additionally, the comparison between rating and sentiment is not 1 to 1, so there will always be some difference. AFINN also does not take into account negation, so saying the app is "not bad" would result in a low rating instead of a positive, and saying "not great" would result in a positive. 
+
+In Conclusion the actual rating prediction using sentiment analysis was still a success, with an overall accuracy of 84.4%. One of the main takeaways from this project and analysis was that most of the dating apps (and likely all apps) have mostly 1 and 5 star reviews. This combined with AFINN likely struggling with more neutral reviews is likely where we lost most of the accuracy. It would be interesting to try this with a few different Sentiment lexicons and compare them if this project were to be expanded on.
+
+
+
+
+
+
